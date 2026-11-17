@@ -1,5 +1,6 @@
 import io
-from datetime import datetime
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from zoneinfo import ZoneInfo
 
 import requests
@@ -46,6 +47,14 @@ def load():
         raise ValueError("Link did not return an Excel file")
     wb = load_workbook(io.BytesIO(r.content), data_only=True)
     ws = wb["Totals"]
+    # When the file was last saved: workbook property first, HTTP header as backup
+    tz = ZoneInfo(TIMEZONE)
+    saved = wb.properties.modified
+    if saved is not None:
+        saved = saved.replace(tzinfo=timezone.utc)
+    elif r.headers.get("Last-Modified"):
+        saved = parsedate_to_datetime(r.headers["Last-Modified"])
+    changed = saved.astimezone(tz).strftime("%b %-d, %-I:%M %p") if saved else "unknown"
     for cell in ("E21", "F16", "F17"):
         if not isinstance(ws[cell].value, (int, float)):
             raise ValueError(f"Totals!{cell} is not a number")
@@ -57,7 +66,8 @@ def load():
         "hours": ws["E23"].value,
         "tests": [(ws[f"C{r}"].value, ws[f"D{r}"].value or 0) for r in range(5, 21)],
         "ctrl": [ws[f"F{r}"].value or 0 for r in range(5, 9)],
-        "fetched": datetime.now(ZoneInfo(TIMEZONE)).strftime("%I:%M:%S %p"),
+        "changed": changed,
+        "fetched": datetime.now(tz).strftime("%-I:%M:%S %p"),
     }
 
 
@@ -112,11 +122,17 @@ def dashboard():
         f'<div class="tile"><div class="k">{k}</div><div class="v">{v}</div></div>'
         for k, v in tiles) + '</div>'
 
+    h += '<div class="label">PROGRESS BY TEST</div><div class="tests">'
+    for num, n in d["tests"]:
+        cls = "done" if n >= per_test else "part" if n > 0 else ""
+        h += f'<div class="test {cls}">Test {num}: {n:g} / {per_test:g}</div>'
+    h += '</div>'
 
     if error:
-        h += f'<div class="err">Connection lost \u2014 showing data from {d["fetched"]}</div>'
+        h += f'<div class="err">Connection lost \u2014 showing data from {d["changed"]}</div>'
     else:
-        h += f'<div class="status">Updated {d["fetched"]}</div>'
+        h += (f'<div class="status">Data last changed {d["changed"]} '
+              f'&nbsp;\u00b7&nbsp; checked {d["fetched"]}</div>')
     st.markdown(h, unsafe_allow_html=True)
 
 
