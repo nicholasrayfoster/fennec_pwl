@@ -112,11 +112,6 @@ def dashboard():
         f'<div class="tile"><div class="k">{k}</div><div class="v">{v}</div></div>'
         for k, v in tiles) + '</div>'
 
-    h += '<div class="label">PROGRESS BY TEST</div><div class="tests">'
-    for num, n in d["tests"]:
-        cls = "done" if n >= per_test else "part" if n > 0 else ""
-        h += f'<div class="test {cls}">Test {num}: {n:g} / {per_test:g}</div>'
-    h += '</div>'
 
     if error:
         h += f'<div class="err">Connection lost \u2014 showing data from {d["fetched"]}</div>'
