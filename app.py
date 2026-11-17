@@ -116,7 +116,7 @@ def dashboard():
 
     tiles = [("HOURS COLLECTED", f'{d["hours"]:.2f} hrs'),
              ("MANEUVERS REMAINING", f"{total_need - total_done:g}"),
-             ("WORKLOAD TESTS DONE", f'{tests_done} of {len(d["tests"])}'),
+             ("WORKLOAD TEST SETS DONE", f'{tests_done} of {len(d["tests"])}'),
              ("CONTROL SETS DONE", f'{ctrl_done} of {len(d["ctrl"])}')]
     h += '<div class="tiles">' + "".join(
         f'<div class="tile"><div class="k">{k}</div><div class="v">{v}</div></div>'
